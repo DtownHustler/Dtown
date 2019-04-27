@@ -132,4 +132,3 @@ SELECT s.surname, s.score, s.N_GROUP
 FROM students s
 GROUP BY s.N_GROUP
 Having max(s.score);
-/**/
