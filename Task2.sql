@@ -133,4 +133,215 @@ FROM students s
 GROUP BY s.N_GROUP
 Having max(s.score);
 
-/*Многотабличные*/
+/*Многотабличные запросы*/
+/*1. Вывести все имена и фамилии студентов, и название хобби, которым занимается этот студент.*/
+
+select s.name, s.surname, h.name
+from students s
+inner join students_hobbies sh on s.n_z = sh.n_z
+inner join hobbies h on sh.HOBBY_ID = h.id
+
+/*Выведет и тех студентов, у которых нет никаких хобби. 
+Правое вхождение будет эквивалентно обычному внутреннему, так как присутствует внешний ключ*/
+select *
+from students
+left join students_hobbies on students.N_Z = students_hobbies.N_Z;
+
+/*2. Вывести информацию о студенте, занимающимся хобби самое продолжительное время.*/
+Select S.*,
+case
+	when sh.DATE_FINISH IS NULL then Datediff(Now(), sh.date_start)
+	else Datediff(sh.date_finish, sh.date_start)
+end as Date_Finish
+From STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+INNER JOIN HOBBIES H on H.ID = SH.HOBBY_ID
+ORDER BY Date_Finish desc
+Limit 1;
+
+/*3. Вывести имя, фамилию, номер зачетки и дату рождения для студентов, 
+средний балл которых выше среднего, 
+а сумма риска всех хобби, которыми он занимается в данный момент, больше 0.9.*/
+SELECT S.NAME, S.SURNAME,S.N_Z, S.DATE_BIRTH, t1.risksum
+FROM STUDENTS S,
+	(
+        SELECT sh.n_z, sum(h.risk) AS risksum
+        FROM students_hobbies sh
+        INNER JOIN hobbies h ON sh.hobby_id = h.id
+        GROUP BY sh.n_z
+    ) t1
+WHERE s.n_z = t1.n_z AND t1.risksum > 9 and s.score >= (select avg(s1.score) from students s1);
+
+/*4. Вывести фамилию, имя, зачетку, дату рождения, 
+название хобби и длительность в месяцах, для всех завершенных хобби.*/
+Select S.NAME, S.SURNAME, S.N_Z, H.NAME, TIMESTAMPDIFF(month, sh.date_start, sh.date_finish)
+From STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+INNER JOIN HOBBIES H on H.ID = SH.HOBBY_ID
+where sh.DATE_FINISH IS NOT NULL;
+
+/*5. Вывести фамилию, имя, зачетку, дату рождения студентов, 
+которым исполнилось N полных лет на текущую дату, и которые имеют более 1 действующего хобби.*/ 
+Select S.NAME, S.SURNAME, S.N_Z, S.DATE_BIRTH
+From STUDENTS S 
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+INNER JOIN HOBBIES H on H.ID = SH.HOBBY_ID
+where TIMESTAMPDIFF(year, s.DATE_BIRTH, Now()) = '21' and SH.DATE_FINISH is null
+group by S.NAME, S.SURNAME, S.N_Z, S.DATE_BIRTH
+having count(*) > 1;
+
+/*6. Найти средний балл в каждой группе, учитывая только баллы студентов, 
+которые имеют хотя бы одно действующее хобби.*/ 
+Select N_GROUP, AVG(SCORE)
+From STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+where SH.DATE_FINISH is NULL
+GROUP by N_GROUP;
+
+/*7. Найти название, риск, длительность в месяцах самого продолжительного хобби из действующих,
+указав номер зачетки студента и номер его группы.*/
+Select S.N_Z, S.N_GROUP, H.NAME, H.RISK, Datediff(sh.date_finish, sh.date_start) as Amount
+From STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+INNER JOIN HOBBIES H on H.ID = SH.HOBBY_ID
+where sh.DATE_FINISH IS not NULL and sh.date_start is not null
+ORDER BY Amount desc
+Limit 1;
+
+/*8. Найти все хобби, которыми увлекаются студенты, имеющие максимальный балл.*/ 
+Select S.NAME, S.SURNAME, H.NAME as Hobbie, S.SCORE
+From STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+INNER JOIN HOBBIES H on H.ID = SH.HOBBY_ID
+where S.SCORE = (Select MAX(SCORE) From STUDENTS);
+
+/*9. Найти все действующие хобби, которыми увлекаются троечники 2-го курса.*/ 
+Select S.NAME, S.SURNAME, H.NAME as Hobbie, S.SCORE, S.N_GROUP
+From STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+INNER JOIN HOBBIES H on H.ID = SH.HOBBY_ID
+where S.SCORE>=3 and s.score<=4 and s.n_group>=2000 and s.n_group<3000 and SH.DATE_FINISH is null;
+
+/*10. Найти номера курсов, на которых более 50% студентов имеют более одного действующего хобби.*/ 
+
+
+/*11. Вывести номера групп, в которых не менее 60% студентов имеют балл не ниже 4.*/
+Select *
+From (Select N_GROUP, COUNT(*) as avg_count From STUDENTS Group by N_GROUP) t1
+INNER JOIN (Select N_GROUP, COUNT(*) as inner_count From STUDENTS Where SCORE >= 4 
+Group by N_GROUP) t2 on t2.N_GROUP = t1.N_GROUP
+where t2.inner_count/t1.avg_count >= 0.6;
+
+/*12. Для каждого курса подсчитать количество различных действующих хобби на курсе.*/
+select substr(S.N_GROUP,1,1), Count(distinct sh.hobby_id), 
+from students s
+INNER JOIN STUDENTS_HOBBIES SH ON S.N_Z = SH.N_Z
+group by substr(S.N_GROUP,1,1)
+where sh.date_start in not null and sh.date_finish is null;
+
+/*13. Вывести номер зачётки, фамилию и имя, дату рождения и номер курса для всех отличников, не имеющих хобби. 
+Отсортировать данные по возрастанию в пределах курса по убыванию даты рождения.*/
+Select S.N_Z, S.SURNAME, S.NAME, S.DATE_BIRTH, substr(S.N_GROUP,1,1)
+From STUDENTS S
+LEFT JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+where S.SCORE > 4 and  SH.date_start is null
+order by substr(S.N_GROUP,1,1) asc, s.score desc;
+
+/*14. Создать представление, в котором отображается вся информация о студентах, 
+которые продолжают заниматься хобби в данный момент и занимаются им как минимум 5 лет.*/
+CREATE VIEW v1 AS
+SELECT S.*
+FROM STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH ON S.N_Z = SH.N_Z
+WHERE sh.date_finish IS NULL AND TIMESTAMPDIFF(YEAR, sh.date_start, Now()) >= 5;
+
+/*15. Для каждого хобби вывести количество людей, которые им занимаются.*/
+Select  h.name,Count(*)
+From hobbies h
+inner join students_hobbies sh on sh.hobby_id = h.id
+group by h.id;
+
+/*16. Вывести ИД самого популярного хобби.*/
+Select h.id
+From hobbies h
+inner join students_hobbies sh on sh.hobby_id = h.id
+group by h.id
+order by Count(*) desc
+limit 1;
+
+/*17.  Вывести всю информацию о студентах, занимающихся самым популярным хобби.*/
+select s.*
+from students s
+inner join students_hobbies sh on s.n_z = sh.n_z
+inner join (Select h.id as maxId
+From hobbies h
+inner join students_hobbies sh on sh.hobby_id = h.id
+group by h.id
+order by Count(*) desc
+limit 1) t1 on sh.hobby_id = t1.maxId;
+
+
+/*18. Вывести ИД 3х хобби с максимальным риском.*/
+Select h.id, H.RISK
+From HOBBIES H 
+ORDER by RISK desc 
+Limit 3;
+
+/*19. Вывести 10 студентов, которые занимаются одним (или несколькими) хобби самое продолжительно время.*/
+Select  s.*, case 
+when sh.date_finish is not null then Datediff(sh.date_finish, sh.date_start)
+else Datediff(Now(), sh.date_start)
+end as hobbyTime
+From STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+where sh.DATE_FINISH IS NOT NULL
+ORDER by hobbyTime desc 
+Limit 10;
+
+/*20. Вывести номера групп (без повторений), в которых учатся студенты из предыдущего запроса.*/
+Select distinct s.n_group, case 
+when sh.date_finish is not null then Datediff(sh.date_finish, sh.date_start)
+else Datediff(Now(), sh.date_start)
+end as hobbyTime
+From STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+where sh.DATE_FINISH IS NOT NULL
+ORDER by hobbyTime desc 
+Limit 10;
+
+/*21. Создать представление, которое выводит номер зачетки, имя и фамилию студентов, 
+отсортированных по убыванию среднего балла.*/
+Create or replace VIEW N21 
+as Select S.N_Z, NAME, S.SURNAME
+From STUDENTS S
+ORDER by SCORE desc;
+
+/*22. Представление: найти каждое популярное хобби на каждом курсе.*/
+create or replace VIEW v3
+select substr(S.N_GROUP,1,1), t1.name
+from students s
+inner join students_hobbies sh on s.n_z = sh.n_z
+inner join (
+    Select h.id as maxId, h.name as name
+    From hobbies h
+    inner join students_hobbies sh on sh.hobby_id = h.id
+    group by h.id
+    order by Count(*) desc
+    limit 1
+            ) t1 on sh.hobby_id = t1.maxId
+group by substr(S.N_GROUP,1,1);
+
+/*23. Представление: найти хобби с максимальным риском среди самых популярных хобби на 2 курсе.*/
+create or replace VIEW v4
+select substr(S.N_GROUP,1,1), t1.name
+from students s
+inner join students_hobbies sh on s.n_z = sh.n_z
+inner join (
+    Select h.id as maxId, h.name as name
+    From hobbies h
+    inner join students_hobbies sh on sh.hobby_id = h.id
+    group by h.id
+    order by Count(*) desc
+    limit 1
+            ) t1 on sh.hobby_id = t1.maxId, (select id as id, max(risk) from hobbies) t3
+where substr(S.N_GROUP,1,1) = '2' and t1.maxId = t3.id;
