@@ -141,11 +141,7 @@ from students s
 inner join students_hobbies sh on s.n_z = sh.n_z
 inner join hobbies h on sh.HOBBY_ID = h.id
 
-/*Выведет и тех студентов, у которых нет никаких хобби. 
-Правое вхождение будет эквивалентно обычному внутреннему, так как присутствует внешний ключ*/
-select *
-from students
-left join students_hobbies on students.N_Z = students_hobbies.N_Z;
+
 
 /*2. Вывести информацию о студенте, занимающимся хобби самое продолжительное время.*/
 Select S.*,
@@ -345,3 +341,150 @@ inner join (
     limit 1
             ) t1 on sh.hobby_id = t1.maxId, (select id as id, max(risk) from hobbies) t3
 where substr(S.N_GROUP,1,1) = '2' and t1.maxId = t3.id;
+
+/*24. Представление: для каждого курса подсчитать количество студентов на курсе и количество отличников.*/
+
+
+/*25. Представление: самое популярное хобби среди всех студентов.*/ 
+CREATE OR REPLACE VIEW V6 AS 
+Select h.name, Count(sh.n_z) as counter
+From hobbies h
+inner join students_hobbies sh on sh.hobby_id = h.id
+group by hobby_id
+order by counter desc
+limit 1;
+
+/*26. Создать обновляемое представление.-??????*/
+
+
+/*27.Для каждой буквы алфавита из имени найти максимальный, средний и минимальный балл. 
+(Т.е. среди всех студентов, чьё имя начинается на А (Алексей, Алина, Артур, Анджела) найти то, что указано в задании. 
+Вывести на экран тех, максимальный балл которых больше 3.6*/
+Select substr(s.name,1,1) as literal, max(s.score), avg(s.score), min(s.score)
+From students s 
+Where s.score > 3.6
+group by substr(s.name,1,1);
+
+/*28.Для каждой фамилии на курсе вывести максимальный и минимальный средний балл. 
+(Например, в университете учатся 4 Иванова (1-2-3-4). 
+1-2-3 учатся на 2 курсе и имеют средний балл 4.1, 4, 3.8 соответственно, 
+а 4 Иванов учится на 3 курсе и имеет балл 4.5. На экране должно быть следующее: 2 Иванов 4.1 3.8 3 Иванов 4.5 4.5*/
+Select substr(s.N_GROUP,1,1), s.surname, max(s.score), min(s.score)
+From students s
+Group by substr(s.N_GROUP,1,1), s.surname;
+
+
+/*29.Для каждого года рождения подсчитать количество хобби, которыми занимаются или занимались студенты.*/
+Select date_format(s.date_birth, '%Y'), Count(*)
+From STUDENTS S 
+INNER JOIN students_hobbies SH on s.n_z = sh.n_z
+INNER JOIN hobbies H on H.id = sh.hobby_id
+group by date_format(s.date_birth, '%Y');
+
+/*30. Для каждой буквы алфавита в имени найти максимальный и минимальный риск хобби.*/
+Select substr(s.name,1,1), max(h.risk), min(h.risk)
+From students s 
+INNER JOIN students_hobbies SH on S.N_Z = SH.N_Z
+INNER JOIN HOBBIES H on H.ID = SH.HOBBY_ID
+group by substr(s.name,1,1);
+
+/*31.Для каждого месяца из даты рождения вывести средний балл студентов, которые занимаются хобби с названием «Футбол»*/
+Select date_format(s.date_birth, '%M') as month, s.score
+From students s 
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+INNER JOIN HOBBIES H on (H.ID = SH.HOBBY_ID and H.NAME = 'Sewing')
+group by date_format(s.date_birth, '%M');
+
+/*32.Вывести информацию о студентах, которые занимались или занимаются хотя бы 1 хобби в следующем формате: Имя: Иван, фамилия: Иванов, группа: 1234*/
+Select s.name as Имя,S.SURNAME as Фамилия,S.N_GROUP as Группа
+From STUDENTS S
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z;
+
+/*33.Найдите в фамилии в каком по счёту символа встречается «ов». Если 0 (т.е. не встречается, то выведите на экран «не найдено»*/
+Select s.surname, case 
+When s.surname like '%ов' then position('ов' in s.surname)
+Else 'Не найдено'
+End 
+From students s;
+
+/*34.Дополните фамилию справа символом # до 10 символов. ?????*/
+
+
+/*35.-/*
+
+/*36.Выведите на экран сколько дней в апреле 2018 года.*/
+select day(last_day('2018.04.01'))as Апрель2018;
+
+/*37. Выведите на экран какого числа будет ближайшая суббота.*/
+select date_add(now(), interval 7-dayofweek(now()) day) as БлижайшаяСуббота;
+
+/*38.Выведите на экран век, а также какая сейчас неделя года и день года.*/
+select cast(
+substr(
+    date_format(now(),'%Y'),1,2)
+         as signed)+1 as Век, 
+            week(now()) as Неделя, 
+                dayofyear(now()) as День;
+
+/*39. Выведите всех студентов, которые занимались или занимаются хотя бы 1 хобби. 
+Выведите на экран Имя, Фамилию, Названию хобби, а также надпись «занимается», 
+если студент продолжает заниматься хобби в данный момент или «закончил», если уже не занимается.*/
+select s.name,s.surname, h.name, sh.n_z, 
+case
+When sh.DATE_FINISH is null then 'Занимается'
+else 'Кончил' 
+end as Состояние
+from students s
+INNER JOIN STUDENTS_HOBBIES SH on S.N_Z = SH.N_Z
+INNER JOIN HOBBIES H on sh.hobby_id = h.id;
+
+/*40.Для каждой группы вывести сколько студентов учится на 5,4,3,2. Использовать обычное математическое округление. Итоговый результат должен выглядеть примерно в таком виде:*/
+
+
+/*Задания на изменение/удаление/добавление*/
+
+/*1. Удалите всех студентов с неуказанной датой рождения*/
+delete
+from students$
+where s.date_birth is null;
+
+/*2.Измените дату рождения всех студентов, с неуказанной датой рождения на 01-01-1999*/
+update students$
+set date_birth = '1999-01-01'
+where date_birth is null;
+
+/*3.Удалите из таблицы студента с номером зачётки 21*/
+delete
+from students$
+where n_z = 21;
+
+
+/*4. Уменьшите риск хобби, которым занимается наибольшее количество человек*/
+update hobbies$
+set risk = risk - 1
+where id = (
+select t1.id
+from
+    (
+    select Count(*) as hobby_counter, sh.hobby_id as id
+    from students$_hobbies sh
+    group by sh.hobby_id
+    order by hobby_counter desc
+    limit 1
+    ) t1
+);
+
+/*5. Добавьте всем студентам, которые занимаются хотя бы одним хобби 0.01 балл*/
+update students$
+set score = score + 0.01
+where n_z = (select sh.n_z from students$_hobbies where sh.date_finish is null and sh.date_start is not null);
+
+/*6. Удалите все завершенные хобби студентов*/
+DELETE
+FROM hobbies$
+where ID = (select sh.HOBBY_ID from students$_hobbies sh where sh.date_finish is not null);
+
+/*7. Добавьте студенту с n_z 4 хобби с id 5. date_start - '15-11-2009, date_finish - null*/
+update students$_hobbies
+set date_start = '2009-11-15', date_finish = null
+where students$_hobbies.n_z = 4 and students$_hobbies.hobby_id = 5;
