@@ -118,6 +118,7 @@ from specialist_patients
 where id = sp_id;
 
 --6. Для каждого специалиста выведите количество активных направлений к нему
+-- как понять, что направление активное?
 select s.name, Count(*)
 from specialists s
 inner join specialists_patients sp on sp.specialists_id = s.id
@@ -125,7 +126,10 @@ group by sp.specialists_id;
 
 --7. Для заданного врача выведите список свободных приемов в заданный день
 
+-- ?
+
 --8. Для каждого участкового вывести 2-х самых часто посещающих его пациента
+-- оно не запустилось
 select dp.*, Count(*) as counter
 from doctors_patients dp
 group by dp.doctors_id, dp.patients_id
@@ -134,12 +138,14 @@ order by counter desc
 limit 2;
 
 --9. Выведите пациентов, которые не явились на приём более 3-х раз
+-- тоже не запускается, 8 и 9 смотри на group by. Там должны быть все атрибуты, которые выводятся в Select (не считая групповых функций)
 select dp.*
 from doctors_patients dp
 group by dp.patients_id
 having Count(*) > 3 and dp.visited = "Не явился(-ась)";
 
 --10. Для каждого участка выведите отношение количества участовых к количеству пациентов на участке
+-- как и 8,9 
 select r.name, 1/Count(*)
 from region r
 group by r.doctors_id;
