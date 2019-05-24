@@ -130,11 +130,17 @@ from specialist_patients
 where id = sp_id;
 
 --6. Для каждого специалиста выведите количество активных направлений к нему
--- как понять, что направление активное?
-select s.name, Count(*)
-from specialists s
-inner join specialists_patients sp on sp.specialists_id = s.id
-group by sp.specialists_id;
+-- Талон в моей БД выдается участковым доктором пациенту. В нем хранятся данные о том, когда он выдан, когда истечет срок, кем и кому
+-- но не для кого
+-- поэтому, пациент волен пойти к любому специалисту
+-- в связи с этим мне пришлось "переиначить" задание на этот запрос
+-- Выводится пациент и количество талонов, у которых не истек срок и по которым он никуда не ходил
+select p.name, Count(*)
+from patients p
+inner join doctors_tickets_patients dtp on p.id = dtp.patients_id
+inner join specialists_patients sp on p.id = sp.patients_id
+where dtp.date_expired > Now() and sp.visited = "Не явился(-ась)"
+group by p.id;
 
 --7. Для заданного врача выведите список свободных приемов в заданный день
 
