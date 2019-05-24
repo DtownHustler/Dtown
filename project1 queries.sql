@@ -18,8 +18,12 @@ insert into specialists (name, surname) VALUES ("Михаил", "Чикатил�
 insert into specialists_patients (specialists_id, patients_id, visited) VALUES (2, 2, "Не явился(-ась)");
 insert into specialists_patients (specialists_id, patients_id, visited) VALUES (2, 3, "Явился(-ась)");
 insert into specialists_patients (patients_id, specialists_id, visited) VALUES (1, 1, "Не явился(-ась)");
+insert into specialists_patients (specialists_id, patients_id, visited) VALUES (1, 1, "Явился(-ась)");
 
 insert into doctors_tickets_patients (date_expired, date_received, patients_id, region_doctors_id) VALUES ("2030-11-13", Now(), 1, 1);
+insert into doctors_tickets_patients (date_expired, date_received, patients_id, region_doctors_id) VALUES ("2020-11-13", Now(), 1, 1);
+insert into doctors_tickets_patients (date_expired, date_received, patients_id, region_doctors_id) VALUES ("2000-11-13","2010-11-13", 2, 2);
+
 
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (2, 2, "Явился(-ась)");
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (2, 3, "Явился(-ась)");
@@ -144,23 +148,7 @@ group by p.id;
 
 --7. Для заданного врача выведите список свободных приемов в заданный день
 
--- ?
-
 --8. Для каждого участкового вывести 2-х самых часто посещающих его пациента
-<<<<<<< Updated upstream
--- оно не запустилось
-select dp.*, Count(*) as counter
-from doctors_patients dp
-group by dp.doctors_id, dp.patients_id
-having dp.visited = "Явился(-ась)"
-order by counter desc
-limit 2;
-
---9. Выведите пациентов, которые не явились на приём более 3-х раз
--- тоже не запускается, 8 и 9 смотри на group by. Там должны быть все атрибуты, которые выводятся в Select (не считая групповых функций)
-select dp.*
-from doctors_patients dp
-=======
 select rd.surname, rd.name
 from region_doctors rd,
 (
@@ -173,27 +161,18 @@ from region_doctors rd,
 ) t1
 where rd.id = t1.id;
 
-
 --9. Выведите пациентов, которые не явились на приём более 3-х раз
 select dp.patients_id,p.name,p.surname, Count(*) as propuskee
 from doctors_patients dp, patients p
 where dp.visited = 'Не явился(-ась)' and dp.patients_id=p.id
->>>>>>> Stashed changes
 group by dp.patients_id
 having Count(*) > 3;
 
 --10. Для каждого участка выведите отношение количества участовых к количеству пациентов на участке
-<<<<<<< Updated upstream
--- как и 8,9 
-select r.name, 1/Count(*)
-from region r
-group by r.doctors_id;
-=======
 select r.name,rd.name, 1/Count(*) as "Отношение кол-ва пациентов к врачам"
 from region r,region_doctors rd
 where r.doctors_id=rd.id
 group by r.doctors_id,r.name;
->>>>>>> Stashed changes
 
 --11.1 Выведите id всех пациентов для каждого специалиста
 select s.name, s.surname, p.name, p.surname
