@@ -6,10 +6,23 @@ insert into region_doctors (name, surname) VALUES ("Зураб", "Подмыхи
 insert into patients (name, surname) VALUES ("Бабулька", "Старенькая");
 insert into patients (name, surname) VALUES ("Дед", "Пердед");
 insert into patients (name, surname) VALUES ("Джонии", "Ноксвелл");
+insert into patients (name, surname) VALUES ("Иван", "Иваныч");
+insert into patients (name, surname) VALUES ("Иван", "Рван");
+insert into patients (name, surname) VALUES ("Виктор", "Вахля");
+insert into patients (name, surname) VALUES ("Аким", "Адад");
+insert into patients (name, surname) VALUES ("Джон", "Траволта");
+insert into patients (name, surname) VALUES ("Вася", "Мохнатый");
 
 insert into region (doctors_id, patients_id, name) VALUES (1, 1, "Сараево");
 insert into region (doctors_id, patients_id, name) VALUES (2, 2, "Купянск");
 insert into region (doctors_id, patients_id, name) VALUES (2, 3, "Купянск");
+insert into region (doctors_id, patients_id, name) VALUES (2, 4, "Купянск");
+insert into region (doctors_id, patients_id, name) VALUES (3, 5, "Крыжополь");
+insert into region (doctors_id, patients_id, name) VALUES (3, 6, "Крыжополь");
+insert into region (doctors_id, patients_id, name) VALUES (3, 7, "Крыжополь");
+insert into region (doctors_id, patients_id, name) VALUES (3, 8, "Крыжополь");
+insert into region (doctors_id, patients_id, name) VALUES (1, 9, "Сараево");
+
 
 insert into specialists (name, surname) VALUES ("Виталий", "Шоколадный-Глаз");
 insert into specialists (name, surname) VALUES ("Зинаида", "Гнойная");
@@ -28,6 +41,7 @@ insert into doctors_tickets_patients (date_expired, date_received, patients_id, 
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (2, 2, "Явился(-ась)");
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (2, 3, "Явился(-ась)");
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (2, 2, "Явился(-ась)");
+insert into doctors_patients (doctors_id, patients_id, visited) VALUES (2, 4, "Явился(-ась)");
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (1, 1, "Явился(-ась)");
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (2, 3, "Не явился(-ась)");
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (2, 3, "Не явился(-ась)");
@@ -37,8 +51,14 @@ insert into doctors_patients (doctors_id, patients_id, visited) VALUES (1, 1, "�
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (1, 1, "Не явился(-ась)");
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (1, 1, "Не явился(-ась)");
 insert into doctors_patients (doctors_id, patients_id, visited) VALUES (1, 1, "Не явился(-ась)");
-
-
+insert into doctors_patients (doctors_id, patients_id, visited) VALUES (3, 8, "Явился(-ась)");
+insert into doctors_patients (doctors_id, patients_id, visited) VALUES (3, 8, "Явился(-ась)");
+insert into doctors_patients (doctors_id, patients_id, visited) VALUES (3, 8, "Явился(-ась)");
+insert into doctors_patients (doctors_id, patients_id, visited) VALUES (3, 8, "Явился(-ась)");
+insert into doctors_patients (doctors_id, patients_id, visited) VALUES (3, 7, "Явился(-ась)");
+insert into doctors_patients (doctors_id, patients_id, visited) VALUES (3, 7, "Явился(-ась)");
+insert into doctors_patients (doctors_id, patients_id, visited) VALUES (3, 6, "Явился(-ась)");
+insert into doctors_patients (doctors_id, patients_id, visited) VALUES (1, 9, "Явился(-ась)");
 --2. Написать запрос на каждую таблицу, который добавляет в неё данные (исключая атрибут, который заполняется при помощи автоинкремента)
 insert into region_doctors (name, surname) VALUES (rd_name, rd_surname);
 
@@ -140,26 +160,35 @@ where id = sp_id;
 -- в связи с этим мне пришлось "переиначить" задание на этот запрос
 -- Выводится пациент и количество талонов, у которых не истек срок и по которым он никуда не ходил
 select p.name, Count(*)
-from patients p
-inner join doctors_tickets_patients dtp on p.id = dtp.patients_id
-inner join specialists_patients sp on p.id = sp.patients_id
-where dtp.date_expired > Now() and sp.visited = "Не явился(-ась)"
-group by p.id;
+from patients p, specialists_patients sp,
+(select patients_id as p_id from doctors_tickets_patients where date_expired > Now()) dtpNotExp
+where p.id = sp.patients_id and sp.visited != "Явился(-ась)" and sp.patients_id = dtpNotExp.p_id
+group by sp.patients_id, sp.specialists_id;
 
 --7. Для заданного врача выведите список свободных приемов в заданный день
 
 --8. Для каждого участкового вывести 2-х самых часто посещающих его пациента
-select rd.surname, rd.name
-from region_doctors rd,
-(
-    select dp.doctors_id as id, Count(*) as counter
-    from doctors_patients dp
-    where dp.visited = "Явился(-ась)"
-    group by dp.doctors_id, dp.patients_id
-    order by counter desc
-    limit 2
-) t1
-where rd.id = t1.id;
+drop PROCEDURE if exists doiterate;
+CREATE PROCEDURE doiterate()
+BEGIN
+    declare p1 INT;
+    declare size INT;
+    create temporary table ttable (rdsurname varchar(45),rdname varchar(45), pname varchar(45), psurname varchar(45), counter int);
+    set p1 = 1;
+    set size = (select max(id) from region_doctors);
+    WHILE p1 <= size DO
+        insert into ttable select rd.surname, rd.name as Имя_Доктора, p.name as Имя_Пациента, p.surname as Фамилия_Пациента, Count(*) as counter
+        from doctors_patients dp, patients p, region_doctors rd
+        where dp.visited = "Явился(-ась)" and dp.patients_id = p.id and dp.doctors_id = rd.id and p1 = rd.id
+        group by dp.doctors_id, dp.patients_id
+        order by counter desc
+        limit 2;
+        SET p1 = p1 + 1;
+    END WHILE;
+    select * from ttable;
+END;
+
+call doiterate();
 
 --9. Выведите пациентов, которые не явились на приём более 3-х раз
 select dp.patients_id,p.name,p.surname, Count(*) as propuskee
